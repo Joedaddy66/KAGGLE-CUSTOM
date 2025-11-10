@@ -1,6 +1,8 @@
 // constants.ts
 import { KaggleCompetition, ModelTemplate } from './types';
 
+export const BACKEND_API_BASE_URL = 'http://localhost:5000'; // Change this to your deployed backend URL in production
+
 export const MOCK_KAGGLE_COMPETITIONS: KaggleCompetition[] = [
   {
     id: 'titanic',
@@ -188,8 +190,8 @@ def run_crypto_lambda_engine(args):
     Simulates the Lambda-Law Regression Pipeline for cryptographic timing data.
     log10(T) = a * log10(λ) + b * bits + c
     """
-    print(f"\\n--- {SROL_STAMP}: Crypto Lambda Engine ---")
-    print(f"Analyzing data from: {args.input_data or 'simulated data'}")
+    print(f"\\n--- \${SROL_STAMP}: Crypto Lambda Engine ---")
+    print(f"Analyzing data from: \${args.input_data or 'simulated data'}")
 
     if args.input_data:
         try:
@@ -199,7 +201,7 @@ def run_crypto_lambda_engine(args):
             if 'lambda' not in df.columns: df['lambda'] = np.exp(np.random.rand(len(df)) * 3) # Lambda value
             if 'bits' not in df.columns: df['bits'] = np.random.randint(64, 256, len(df)) # Bit length
         except FileNotFoundError:
-            print(f"ERROR: Input data file '{args.input_data}' not found. Generating simulated data.")
+            print(f"ERROR: Input data file '\${args.input_data}' not found. Generating simulated data.")
             df = create_simulated_crypto_data(args.num_samples)
     else:
         df = create_simulated_crypto_data(args.num_samples)
@@ -228,7 +230,7 @@ def run_crypto_lambda_engine(args):
     b = results.params['bits'] if 'bits' in results.params else 0
     c = results.params['const'] if 'const' in results.params else 0
 
-    print(f"\\nExtracted Law: log10(T) = {a:.4f} * log10(λ) + {b:.4f} * bits + {c:.4f}")
+    print(f"\\nExtracted Law: log10(T) = \${a:.4f} * log10(λ) + \${b:.4f} * bits + \${c:.4f}")
 
     # Residual diagnostics plot
     if args.plot_residuals:
@@ -265,8 +267,8 @@ def run_titanic_survival_matrix_engine(args):
     Φ(N) = A(N) × M(N)
     (Conceptual implementation of a custom survival probability model)
     """
-    print(f"\\n--- {SROL_STAMP}: Titanic Survival Matrix Engine ---")
-    print(f"Analyzing data from: {args.input_data or 'simulated data'}")
+    print(f"\\n--- \${SROL_STAMP}: Titanic Survival Matrix Engine ---")
+    print(f"Analyzing data from: \${args.input_data or 'simulated data'}")
 
     if args.input_data:
         try:
@@ -278,7 +280,7 @@ def run_titanic_survival_matrix_engine(args):
             if 'Fare' not in df.columns: df['Fare'] = np.random.rand(len(df)) * 100
             if 'Survived' not in df.columns: df['Survived'] = np.random.randint(0, 2, len(df))
         except FileNotFoundError:
-            print(f"ERROR: Input data file '{args.input_data}' not found. Generating simulated data.")
+            print(f"ERROR: Input data file '\${args.input_data}' not found. Generating simulated data.")
             df = create_simulated_titanic_data(args.num_samples)
     else:
         df = create_simulated_titanic_data(args.num_samples)
@@ -317,10 +319,10 @@ def run_titanic_survival_matrix_engine(args):
         df['Abs_Residual'] = np.abs(df['Residual'])
         
         avg_abs_residual = df['Abs_Residual'].mean()
-        print(f"\\nAverage Absolute Residual (Deviation from Law): {avg_abs_residual:.4f}")
+        print(f"\\nAverage Absolute Residual (Deviation from Law): \${avg_abs_residual:.4f}")
         
         outliers = df[df['Abs_Residual'] > args.outlier_threshold]
-        print(f"\\nDetected {len(outliers)} outliers (deviation > {args.outlier_threshold}):")
+        print(f"\\nDetected \${len(outliers)} outliers (deviation > \${args.outlier_threshold}):")
         if not outliers.empty:
             print(outliers[['Age', 'Sex', 'Pclass', 'Fare', 'Survived', 'Conceptual_Survival_Prob', 'Residual', 'Abs_Residual']].head())
         else:
@@ -347,30 +349,9 @@ def run_titanic_survival_matrix_engine(args):
     print("\\n--- Titanic Survival Matrix Engine Complete ---")
 
 
-def create_simulated_titanic_data(num_samples=100):
-    np.random.seed(42) # for reproducibility
-    _age = np.random.randint(1, 80, num_samples)
-    _sex = np.random.choice(['male', 'female'], num_samples, p=[0.6, 0.4])
-    _pclass = np.random.randint(1, 4, num_samples)
-    _fare = np.random.rand(num_samples) * 150 # up to 150
-    
-    # Simulate Survived based on Pclass and Sex, with some noise
-    _survived = np.zeros(num_samples, dtype=int)
-    _survived[(_sex == 'female') & (_pclass == 1)] = 1
-    _survived[(_sex == 'female') & (_pclass == 2)] = 1
-    _survived[(_sex == 'male') & (_pclass == 1) & (_age < 10)] = 1
-    
-    # Add some randomness to survival
-    for i in range(num_samples):
-        if np.random.rand() < 0.2: # 20% chance to flip survival
-            _survived[i] = 1 - _survived[i]
-            
-    return pd.DataFrame({'Age': _age, 'Sex': _sex, 'Pclass': _pclass, 'Fare': _fare, 'Survived': _survived})
-
-
 def build_parser():
     parser = argparse.ArgumentParser(
-        description=f"{SROL_STAMP} - A Unified Command-Line Engine for Law Extraction and Analysis.",
+        description=f"\${SROL_STAMP} - A Unified Command-Line Engine for Law Extraction and Analysis.",
         formatter_class=argparse.RawTextHelpFormatter
     )
     

@@ -1,10 +1,10 @@
 // components/ModelTrainer.tsx
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { KaggleCompetition, TrainedModel, GeminiModelSuggestion, ModelTemplate, ForgeInputFile } from '../types';
-import { MOCK_MODEL_TEMPLATES } from '../constants';
+import { KaggleCompetition, TrainedModel, GeminiModelSuggestion, ModelTemplate, ForgeInputFile, TrainingReport } from '../types';
+import { MOCK_MODEL_TEMPLATES, BACKEND_API_BASE_URL } from '../constants'; // Import BACKEND_API_BASE_URL
 import Spinner from './Spinner';
 import MarkdownRenderer from './MarkdownRenderer';
-import { getGeminiTrainingEvaluation } from '../services/geminiService'; // Import Gemini evaluation service
+// getGeminiTrainingEvaluation is now orchestrated by the backend, so we don't call it directly here.
 
 interface ModelTrainerProps {
   competitions: KaggleCompetition[];
@@ -14,7 +14,7 @@ interface ModelTrainerProps {
   prefillSuggestion: GeminiModelSuggestion | null;
   clearPrefillSuggestion: () => void;
   trainedModels: TrainedModel[];
-  selectedCompetition: KaggleCompetition | null; // New prop to pass full competition object
+  selectedCompetition: KaggleCompetition | null;
 }
 
 const ModelTrainer: React.FC<ModelTrainerProps> = ({
@@ -25,7 +25,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
   prefillSuggestion,
   clearPrefillSuggestion,
   trainedModels,
-  selectedCompetition, // Use the new prop
+  selectedCompetition,
 }) => {
   const [modelName, setModelName] = useState<string>('');
   const [modelDescription, setModelDescription] = useState<string>('');
@@ -134,29 +134,30 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
     setSaveError(null);
 
     try {
-      // Simulate training time
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Call backend to simulate training and get Gemini evaluation
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/train-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelCode: modelCode,
+          competitionId: trainerCompetitionId,
+          competitionTitle: selectedCompetition.title,
+          competitionDescription: selectedCompetition.description,
+          datasetFileNames: datasetFiles.map(f => f.file.name), // Send only file names conceptually
+        }),
+      });
 
-      // Generate mock metrics (simplified)
-      const mockMetrics = {
-        accuracy: parseFloat((Math.random() * (0.95 - 0.7) + 0.7).toFixed(4)),
-        loss: parseFloat((Math.random() * (0.5 - 0.1) + 0.1).toFixed(4)),
-        "R-squared": parseFloat((Math.random() * (0.9 - 0.5) + 0.5).toFixed(4)), // For regression/law extraction
-        "Avg. Abs. Residual": parseFloat((Math.random() * (0.3 - 0.05) + 0.05).toFixed(4)), // For law extraction
-      };
+      const data = await response.json();
 
-      // Call Gemini for the detailed training evaluation
-      const trainingReport = await getGeminiTrainingEvaluation(
-        modelCode,
-        selectedCompetition.title,
-        selectedCompetition.description,
-        datasetFiles.map(f => f.file.name),
-        mockMetrics
-      );
-
-      if (!trainingReport) {
-        throw new Error("Failed to get training report from Oracle.");
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Backend failed to simulate training or evaluation.");
       }
+
+      const trainingReport: TrainingReport = {
+        mockTrainingLog: data.mockTrainingLog,
+        mockEvaluationReasoning: data.mockEvaluationReasoning,
+        recommendationToSubmit: data.recommendationToSubmit,
+      };
 
       const newModel: TrainedModel = {
         id: `model_${Date.now()}`,
@@ -166,7 +167,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
         description: modelDescription,
         modelCode: modelCode.trim(),
         datasetFiles: datasetFiles.map(f => f.file.name),
-        mockMetrics: mockMetrics,
+        mockMetrics: data.mockMetrics, // Metrics now come from backend
         mockTrainingLog: trainingReport.mockTrainingLog,
         mockEvaluationReasoning: trainingReport.mockEvaluationReasoning,
         recommendationToSubmit: trainingReport.recommendationToSubmit,
@@ -182,19 +183,19 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
         datasetFileInputRef.current.value = '';
       }
 
-      let successMsg = `Model "${newModel.name}" successfully "trained" (simulated) for ${competitions.find(c => c.id === trainerCompetitionId)?.title || trainerCompetitionId}!`;
+      let successMsg = `Model "${newModel.name}" successfully "trained" (simulated by backend) for ${competitions.find(c => c.id === trainerCompetitionId)?.title || trainerCompetitionId}!`;
       successMsg += ` Its configuration has been saved to your local collection.`;
       if (newModel.recommendationToSubmit === true) {
-        successMsg += ` The Oracle recommends: **SUBMIT!** 🚀`;
+        successMsg += ` The Oracle (via backend) recommends: **SUBMIT!** 🚀`;
       } else if (newModel.recommendationToSubmit === false) {
-        successMsg += ` The Oracle recommends: **HOLD.** 🛡️`;
+        successMsg += ` The Oracle (via backend) recommends: **HOLD.** 🛡️`;
       } else {
-        successMsg += ` The Oracle provides a nuanced recommendation. Check the 'Training Report' for details.`;
+        successMsg += ` The Oracle (via backend) provides a nuanced recommendation. Check the 'Training Report' for details.`;
       }
       setTrainingSuccess(successMsg);
 
-    } catch (err) {
-      setTrainingError("Failed to simulate model training or get Oracle evaluation. Please try again.");
+    } catch (err: any) {
+      setTrainingError(`Failed to simulate model training or get Oracle evaluation from backend: ${err.message || String(err)}. Please ensure your backend is running.`);
       console.error(err);
     } finally {
       setIsTraining(false);
@@ -226,7 +227,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
         description: modelDescription,
         modelCode: modelCode.trim(),
         datasetFiles: datasetFiles.map(f => f.file.name), // Save just the names
-        // No mock metrics/logs/evaluation for 'save' action
+        // No mock metrics/logs/evaluation for 'save' action as training simulation was not performed
       };
       onNewTrainedModel(newModel); // Add to parent state and localStorage
 
@@ -265,7 +266,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
           <li><strong>Step 2: Provide Data (Conceptual):</strong> Select the local data files your model would train on.</li>
           <li><strong>Step 3: Choose a Model Helper:</strong> Pick a template or paste your Python code. This is like telling your model what kind of smart helper it should be!</li>
           <li><strong>Step 4: Name Your Model:</strong> Give your model a cool name so you remember it!</li>
-          <li><strong>Step 5: Press "Train Model":</strong> Watch the spinner go! This is your computer thinking really hard.</li>
+          <li><strong>Step 5: Press "Train Model":</strong> Watch the spinner go! This is your computer thinking really hard. This process involves your backend, which simulates the training and provides an Oracle evaluation.</li>
           <li><strong>(Optional) Save Model:</strong> If you just want to save your model's code without "training," use the 'Save Model' button.</li>
         </ol>
       </div>
@@ -398,7 +399,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
           disabled={isActionDisabled}
         ></textarea>
         <p className="mt-2 text-sm text-gray-500">
-          Even though we can't run Python code directly in your browser, imagine this is where your powerful machine learning code lives!
+          This Python code is conceptually sent to your backend for simulated training and evaluation.
         </p>
       </div>
 
@@ -498,7 +499,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
                 <h4 className="text-md font-semibold text-gray-800 mb-2">Dataset Files (Conceptual): <span className="font-normal">{showCodeModal.datasetFiles.join(', ')}</span></h4>
               )}
               <h4 className="text-md font-semibold text-gray-800 mt-4 mb-2">Python Code:</h4>
-              <MarkdownRenderer content={`\`\`\`python\n${showCodeModal.modelCode}\n\`\`\``} />
+              <MarkdownRenderer content={`\`\`\`python\n${showCodeModal.modelCode}\n\`\``} />
 
               {showCodeModal.mockTrainingLog && showCodeModal.mockMetrics && showCodeModal.mockEvaluationReasoning && (
                 <div className="mt-6 border-t pt-4">
@@ -511,7 +512,7 @@ const ModelTrainer: React.FC<ModelTrainerProps> = ({
 
                   <div className="bg-indigo-50 p-4 rounded-md mb-4">
                     <h5 className="font-semibold text-indigo-800 mb-2">Simulated Training Log:</h5>
-                    <MarkdownRenderer content={`\`\`\`text\n${showCodeModal.mockTrainingLog}\n\`\`\``} className="text-sm" />
+                    <MarkdownRenderer content={`\`\`\`text\n${showCodeModal.mockTrainingLog}\n\`\``} className="text-sm" />
                   </div>
 
                   <div className="bg-gray-100 p-4 rounded-md mb-4">

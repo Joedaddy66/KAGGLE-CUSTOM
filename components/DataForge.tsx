@@ -18,7 +18,6 @@ const DataForge: React.FC<DataForgeProps> = () => {
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      // Fix: Explicitly type `file` as `File` in the map callback.
       const newFiles: ForgeInputFile[] = Array.from(event.target.files).map((file: File) => ({
         id: `${file.name}_${Date.now()}`,
         file,
@@ -45,7 +44,6 @@ const DataForge: React.FC<DataForgeProps> = () => {
     event.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50');
 
     if (event.dataTransfer.files) {
-      // Fix: Explicitly type `file` as `File` in the map callback.
       const newFiles: ForgeInputFile[] = Array.from(event.dataTransfer.files).map((file: File) => ({
         id: `${file.name}_${Date.now()}`,
         file,
@@ -89,9 +87,9 @@ const DataForge: React.FC<DataForgeProps> = () => {
       let jobStatus = newJob.status;
       let monitoredJob = newJob;
       while (jobStatus === 'processing') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Add a small delay for UI updates
         monitoredJob = await monitorForgeJob(monitoredJob);
         jobStatus = monitoredJob.status;
-        // Fix: Corrected typo 'monoredJob' to 'monitoredJob'
         setCurrentJob(monitoredJob);
       }
 
@@ -105,20 +103,23 @@ const DataForge: React.FC<DataForgeProps> = () => {
         }
       }
 
-    } catch (err) {
+    } catch (err: any) { // Catch as 'any' to handle potential non-Error objects
       console.error('Data forge initiation error:', err);
+      // Ensure currentJob is not null before attempting to spread it
+      const baseJob = currentJob || { id: 'unknown', inputFiles: [], config: config, startTime: new Date().toISOString(), status: 'failed' };
       setCurrentJob({
-        ...currentJob!, // If currentJob is null, this would throw, but initiateDataForge should always return a job
+        ...baseJob,
         status: 'failed',
         endTime: new Date().toISOString(),
-        errorMessage: 'An unexpected error occurred.',
+        errorMessage: err.message || 'An unexpected error occurred in the forge backend.',
       });
+      setForgeError(err.message || 'An unexpected error occurred in the forge backend.');
     }
   }, [inputFiles, processingRules, outputFormat, outputDatasetName, currentJob]);
 
 
   const handleDownloadOutput = useCallback(async () => {
-    if (currentJob && currentJob.status === 'completed' && currentJob.config) {
+    if (currentJob && currentJob.status === 'completed' && currentJob.config && currentJob.id) {
       try {
         const blob = await downloadStructuredData(currentJob.id, currentJob.config.outputFormat);
         const url = URL.createObjectURL(blob);
@@ -142,7 +143,7 @@ const DataForge: React.FC<DataForgeProps> = () => {
     <div className="bg-white p-6 rounded-lg shadow-md mb-6">
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">The Spartan Data Forge ⚒️</h2>
       <p className="text-gray-600 mb-4">
-        Bring your raw data here! The forge will conceptualize how to transform your text, zip, and other files into a structured dataset ready for model training.
+        Bring your raw data here! The forge will conceptualize how to transform your text, zip, and other files into a structured dataset ready for model training. This process is handled by your **Python backend**.
       </p>
 
       <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-4 mb-4" role="alert">
@@ -151,7 +152,7 @@ const DataForge: React.FC<DataForgeProps> = () => {
           <li><strong>Step 1: Feed the Forge:</strong> Drag-and-drop your data files or pick them from your computer.</li>
           <li><strong>Step 2: Tell the Forge What to Do:</strong> Describe how you want to clean, combine, or shape your data (e.g., "extract all text from zips," "merge CSVs").</li>
           <li><strong>Step 3: Name Your Creation:</strong> Give your new, structured dataset a cool name!</li>
-          <li><strong>Step 4: Start the Forge!</strong> Watch it work its magic. Soon, your data will be ready for training!</li>
+          <li><strong>Step 4: Start the Forge!</strong> Watch it work its magic. This sends a request to your **Python backend** to conceptually process your data. Soon, your data will be ready for training!</li>
         </ol>
       </div>
 

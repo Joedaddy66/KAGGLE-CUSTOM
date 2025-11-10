@@ -1,7 +1,7 @@
 // services/geminiService.ts
 import { GoogleGenAI, GenerateContentResponse, Type, Chat } from "@google/genai";
 import { GeminiModelSuggestion, ChatMessage, TrainingReport } from '../types';
-import { hasKaggleCredentialsConfigured } from './kaggleService'; // Import the new function
+// Removed `hasKaggleCredentialsConfigured` as this service no longer needs it directly
 
 const SPARTAN_ORACLE_SYSTEM_INSTRUCTION = `Ah, noble seeker! I am the Spartan Oracle, a wise and friendly AI assistant, dedicated to guiding you through your Kaggle quests on this platform. My purpose is to illuminate the path, making machine learning accessible and fun, as if teaching a five-year-old. I provide clear explanations, offer relevant suggestions based on your current context, and always encourage your valiant efforts. My tone is ever-helpful, encouraging, and slightly mystical, akin to an ancient oracle offering benevolent foresight.
 
@@ -11,7 +11,7 @@ Current Application Context:
 - The currently selected competition's ID is: {{selectedCompetitionId}} (Title: {{selectedCompetitionTitle}}, Description: {{selectedCompetitionDescription}})
 - You have "trained" {{numTrainedModels}} models.
 - The available Kaggle competitions are: {{availableCompetitionTitles}}
-- Kaggle Account Linked Status: {{isKaggleAccountLinked}} (true/false)
+- Kaggle Account Linked Status: {{isKaggleAccountLinked}} (true/false, refers to backend configuration)
 - You have made {{numPastSubmissions}} simulated submissions.
 - A new 'SROL Unified Law Engine' template is available, capable of extracting fundamental laws from diverse domains (e.g., cryptographic timing, sociological survival). It is a powerful tool for AI curriculum development and analysis, not typically for direct competition submission.
 
@@ -149,6 +149,9 @@ export const getGeminiChatResponse = async (
 };
 
 
+// This function is now conceptually handled by the backend's /api/train-model endpoint.
+// The frontend will call that backend endpoint, which will then handle Gemini's evaluation.
+// Keeping a stub here for type consistency, but its logic won't be directly used.
 export const getGeminiTrainingEvaluation = async (
   modelCode: string,
   competitionTitle: string,
@@ -156,69 +159,12 @@ export const getGeminiTrainingEvaluation = async (
   datasetFileNames: string[],
   mockMetrics: Record<string, number>, // Simulated metrics
 ): Promise<TrainingReport | null> => {
-  if (!process.env.API_KEY) {
-    console.error("Gemini API key is not set for training evaluation. Please configure process.env.API_KEY.");
-    return null;
-  }
-
-  const SROL_STAMP = "SROL Spartan R&D - Unified Law Engine v1.0";
-  const isSrolEngine = modelCode.includes(SROL_STAMP);
-
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-    let evaluationPrompt = `You are a highly analytical AI specialized in machine learning and data science, acting as a "Spartan Oracle" evaluating training results. Your goal is to provide a concise and insightful report based on the provided (simulated) model code, competition context, dataset, and metrics.
-
-Competition Title: ${competitionTitle}
-Competition Description: ${competitionDescription}
-Dataset Files Used (names only): ${datasetFileNames.join(', ') || 'None provided'}
-Simulated Model Code:
-\`\`\`python
-${modelCode}
-\`\`\`
-Simulated Metrics: ${JSON.stringify(mockMetrics)}
-
-`;
-
-    if (isSrolEngine) {
-      evaluationPrompt += `
-This is a specialized "SROL Unified Law Engine" designed for extracting fundamental laws and patterns from data, often for AI curriculum development or deep analysis, rather than direct Kaggle competition submission. Your evaluation should focus on the conceptual insights, the robustness of the 'extracted laws', and its potential as a teaching tool.
-
-Please provide a conceptual training log, then your evaluation reasoning, and finally a recommendation.
-Recommendation for submission: For this type of analytical/curriculum engine, the recommendation should generally be 'false' for direct competition submission, with a clear explanation of its true purpose.
-`;
-    } else {
-      evaluationPrompt += `
-Based on this information, provide a concise training log (simulated output of training), then your evaluation reasoning (strengths, weaknesses, areas for improvement based on competition and metrics), and finally a clear recommendation for Kaggle submission (true/false/null) with a brief justification. Focus on what this model implies for competing in the Kaggle context.
-`;
-    }
-
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-2.5-pro", // Using Pro for detailed evaluation
-      contents: evaluationPrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            mockTrainingLog: { type: Type.STRING, description: "A simulated log of the training process, reflecting the model code." },
-            mockEvaluationReasoning: { type: Type.STRING, description: "Detailed reasoning for the model's performance and suitability." },
-            recommendationToSubmit: { type: Type.BOOLEAN, description: "True if recommended for submission, false otherwise. Null if not applicable/requires more data." },
-          },
-          required: ['mockTrainingLog', 'mockEvaluationReasoning', 'recommendationToSubmit'],
-          propertyOrdering: ['mockTrainingLog', 'mockEvaluationReasoning', 'recommendationToSubmit'],
-        },
-      },
-    });
-
-    const jsonStr = response.text.trim();
-    return JSON.parse(jsonStr) as TrainingReport;
-  } catch (error) {
-    console.error("Error getting training evaluation from Gemini:", error);
+    console.warn("`getGeminiTrainingEvaluation` called directly in frontend. This function is now orchestrated by the backend.");
+    // This frontend stub will no longer make the Gemini call directly.
+    // The backend's /api/train-model will perform this.
     return {
-      mockTrainingLog: "Simulated training log could not be generated due to an Oracle disturbance.",
-      mockEvaluationReasoning: "The Oracle's foresight is clouded. Cannot provide an evaluation at this moment. Ensure your API key is correct and try again.",
+      mockTrainingLog: "Training evaluation orchestrated by backend. Details will appear here.",
+      mockEvaluationReasoning: "Backend is processing evaluation. Please wait.",
       recommendationToSubmit: null,
     };
-  }
 };

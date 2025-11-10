@@ -10,15 +10,15 @@ interface SubmissionFormProps {
   competitions: KaggleCompetition[];
   selectedCompetitionId: string | null;
   trainedModels: TrainedModel[];
-  isKaggleAccountLinked: boolean; // New prop
-  onNewSubmission: (submission: UserSubmission) => void; // New prop
+  isKaggleAccountLinked: boolean; // Now refers to backend configuration status
+  onNewSubmission: (submission: UserSubmission) => void;
 }
 
 const SubmissionForm: React.FC<SubmissionFormProps> = ({
   competitions,
   selectedCompetitionId,
   trainedModels,
-  isKaggleAccountLinked, // Use the new prop
+  isKaggleAccountLinked,
   onNewSubmission,
 }) => {
   const [submissionMethod, setSubmissionMethod] = useState<SubmissionMethod>('file');
@@ -56,7 +56,7 @@ const SubmissionForm: React.FC<SubmissionFormProps> = ({
     event.preventDefault();
 
     if (!isKaggleAccountLinked) {
-      setSubmissionResult({ success: false, message: 'Kaggle account not linked. Please link your account in the "Kaggle Account Status" section before submitting.' });
+      setSubmissionResult({ success: false, message: 'Backend Kaggle credentials not configured. Please ensure your Python backend is running and configured with your credentials to enable submissions.' });
       return;
     }
 
@@ -161,8 +161,8 @@ const SubmissionForm: React.FC<SubmissionFormProps> = ({
 
       {!isKaggleAccountLinked && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Kaggle Account Not Linked</p>
-          <p className="text-sm">Please link your Kaggle account in the "Kaggle Account Status" section above to enable submissions.</p>
+          <p className="font-bold">Backend Kaggle Not Configured</p>
+          <p className="text-sm">Please ensure your **Python backend** is running and configured with your Kaggle API credentials to enable submissions.</p>
         </div>
       )}
 
@@ -179,7 +179,7 @@ const SubmissionForm: React.FC<SubmissionFormProps> = ({
               onChange={() => setSubmissionMethod('file')}
               disabled={isFormDisabled}
             />
-            <span className="ml-2">Upload a CSV File</span>
+            <span className="ml-2">Upload a CSV File (via Backend)</span>
           </label>
           <label className="inline-flex items-center">
             <input
@@ -191,7 +191,7 @@ const SubmissionForm: React.FC<SubmissionFormProps> = ({
               onChange={() => setSubmissionMethod('trainedModel')}
               disabled={isFormDisabled || trainedModels.length === 0}
             />
-            <span className="ml-2">Submit with a Trained Model</span>
+            <span className="ml-2">Submit with a Trained Model (via Backend)</span>
           </label>
         </div>
         {trainedModels.length === 0 && submissionMethod === 'trainedModel' && (

@@ -7,9 +7,9 @@ import SubmissionForm from './components/SubmissionForm';
 import ModelTrainer from './components/ModelTrainer';
 import SpartanOracleAgent from './components/SpartanOracleAgent';
 import DataForge from './components/DataForge';
-import KaggleAuthSection from './components/KaggleAuthSection'; // New import
-import SubmissionHistory from './components/SubmissionHistory'; // New import
-import { fetchKaggleCompetitions, hasKaggleCredentialsConfigured } from './services/kaggleService'; // New import
+import KaggleAuthSection from './components/KaggleAuthSection';
+import SubmissionHistory from './components/SubmissionHistory';
+import { fetchKaggleCompetitions, checkBackendKaggleConfigured } from './services/kaggleService'; // Updated import
 import { KaggleCompetition, TrainedModel, GeminiModelSuggestion, UserSubmission } from './types';
 
 const LOCAL_STORAGE_MODELS_KEY = 'kaggleAssistantTrainedModels';
@@ -24,33 +24,37 @@ const App: React.FC = () => {
   const [trainedModels, setTrainedModels] = useState<TrainedModel[]>([]);
   const [prefillTrainingSuggestion, setPrefillTrainingSuggestion] = useState<GeminiModelSuggestion | null>(null);
   const [oracleConceptualizerPrompt, setOracleConceptualizerPrompt] = useState<string | null>(null);
-  const [isKaggleAccountLinked, setIsKaggleAccountLinked] = useState<boolean>(false); // New state for Kaggle linked status
-  const [submissionHistory, setSubmissionHistory] = useState<UserSubmission[]>([]); // New state for submission history
+  const [isBackendKaggleConfigured, setIsBackendKaggleConfigured] = useState<boolean>(false); // New state for backend Kaggle config status
+  const [submissionHistory, setSubmissionHistory] = useState<UserSubmission[]>([]);
 
   const selectedCompetition = competitions.find(comp => comp.id === selectedCompetitionId) || null;
 
-  // Effect to load competitions on component mount
+  // Effect to load competitions and check backend Kaggle config on component mount
   useEffect(() => {
-    const getCompetitions = async () => {
+    const getCompetitionsAndBackendStatus = async () => {
       setIsLoadingCompetitions(true);
       setErrorCompetitions(null);
       try {
+        // Fetch competitions
         const fetchedCompetitions = await fetchKaggleCompetitions();
         setCompetitions(fetchedCompetitions);
-        // Automatically select the first competition if available
         if (fetchedCompetitions.length > 0) {
           setSelectedCompetitionId(fetchedCompetitions[0].id);
         }
+
+        // Check backend Kaggle configuration
+        const backendConfigured = await checkBackendKaggleConfigured();
+        setIsBackendKaggleConfigured(backendConfigured);
+
       } catch (error) {
-        console.error("Failed to fetch Kaggle competitions:", error);
-        setErrorCompetitions("Failed to load competitions. Please try again later.");
+        console.error("Failed to initialize app data:", error);
+        setErrorCompetitions("Failed to load initial data. Ensure backend is running.");
       } finally {
         setIsLoadingCompetitions(false);
       }
     };
 
-    getCompetitions();
-    setIsKaggleAccountLinked(hasKaggleCredentialsConfigured()); // Initialize linked status
+    getCompetitionsAndBackendStatus();
   }, []); // Empty dependency array means this runs once on mount
 
   // Effect to load trained models from localStorage on initial render
@@ -123,8 +127,9 @@ const App: React.FC = () => {
   }, []);
 
   // Callback for KaggleAuthSection to update linked status
-  const handleKaggleAuthStatusChange = useCallback((isLinked: boolean) => {
-    setIsKaggleAccountLinked(isLinked);
+  // Now reflects backend status check
+  const handleBackendKaggleConfigStatusChange = useCallback((isConfigured: boolean) => {
+    setIsBackendKaggleConfigured(isConfigured);
   }, []);
 
   const handleNewSubmission = useCallback((submission: UserSubmission) => {
@@ -166,14 +171,14 @@ const App: React.FC = () => {
               prefillSuggestion={prefillTrainingSuggestion}
               clearPrefillSuggestion={clearPrefillSuggestion}
               trainedModels={trainedModels}
-              selectedCompetition={selectedCompetition} // Pass full competition object
+              selectedCompetition={selectedCompetition}
             />
-            <KaggleAuthSection onAuthStatusChange={handleKaggleAuthStatusChange} />
+            <KaggleAuthSection isBackendKaggleConfigured={isBackendKaggleConfigured} onConfigStatusChange={handleBackendKaggleConfigStatusChange} />
             <SubmissionForm
               competitions={competitions}
               selectedCompetitionId={selectedCompetitionId}
               trainedModels={trainedModels}
-              isKaggleAccountLinked={isKaggleAccountLinked}
+              isKaggleAccountLinked={isBackendKaggleConfigured} {/* Use backend status */}
               onNewSubmission={handleNewSubmission}
             />
             <SubmissionHistory
@@ -189,7 +194,7 @@ const App: React.FC = () => {
       </main>
       <footer className="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; {new Date().getFullYear()} Kaggle Submission Assistant. All rights reserved.</p>
-        <p className="text-sm mt-1">Powered by Google Gemini API.</p>
+        <p className="text-sm mt-1">Powered by Google Gemini API and a Flask Backend.</p>
       </footer>
 
       <SpartanOracleAgent
@@ -197,7 +202,7 @@ const App: React.FC = () => {
         selectedCompetition={selectedCompetition}
         trainedModels={trainedModels}
         onSuggestConceptualizerPrompt={handleSuggestConceptualizerPrompt}
-        isKaggleAccountLinked={isKaggleAccountLinked}
+        isKaggleAccountLinked={isBackendKaggleConfigured} {/* Use backend status */}
         submissionHistory={submissionHistory}
       />
     </div>

@@ -1,8 +1,7 @@
 // components/SpartanOracleAgent.tsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getGeminiChatResponse } from '../services/geminiService';
-import { KaggleCompetition, TrainedModel, ChatMessage } from '../types';
-// Add missing import for Spinner component
+import { KaggleCompetition, TrainedModel, ChatMessage, UserSubmission } from '../types';
 import Spinner from './Spinner';
 
 interface SpartanOracleAgentProps {
@@ -10,7 +9,8 @@ interface SpartanOracleAgentProps {
   selectedCompetition: KaggleCompetition | null;
   trainedModels: TrainedModel[];
   onSuggestConceptualizerPrompt: (prompt: string) => void;
-  isKaggleAccountLinked: boolean; // New prop
+  isKaggleAccountLinked: boolean; // Now reflects backend configuration status
+  submissionHistory: UserSubmission[]; // Pass submission history for Oracle context
 }
 
 const SpartanOracleAgent: React.FC<SpartanOracleAgentProps> = ({
@@ -18,7 +18,8 @@ const SpartanOracleAgent: React.FC<SpartanOracleAgentProps> = ({
   selectedCompetition,
   trainedModels,
   onSuggestConceptualizerPrompt,
-  isKaggleAccountLinked, // Use the new prop
+  isKaggleAccountLinked,
+  submissionHistory, // Use the new prop
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -81,8 +82,9 @@ const SpartanOracleAgent: React.FC<SpartanOracleAgentProps> = ({
     selectedCompetition: selectedCompetition,
     trainedModels: trainedModels.map(m => ({ id: m.id, name: m.name })),
     competitions: competitions.map(c => ({ id: c.id, title: c.title })),
-    isKaggleAccountLinked: isKaggleAccountLinked, // Include linked status
-  }), [selectedCompetition, trainedModels, competitions, isKaggleAccountLinked]);
+    isKaggleAccountLinked: isKaggleAccountLinked, // Include backend linked status
+    submissionHistory: submissionHistory.map(s => ({ id: s.id })), // Pass minimal submission info
+  }), [selectedCompetition, trainedModels, competitions, isKaggleAccountLinked, submissionHistory]);
 
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim()) return;
