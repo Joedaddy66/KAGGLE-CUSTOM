@@ -135,8 +135,8 @@ def predict_survival():
     """
     try:
         payload = request.get_json(force=True)
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON: {str(e)}'}), 400
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
     
     # Accept single passenger dict or list of passengers
     if isinstance(payload, dict):
@@ -153,8 +153,8 @@ def predict_survival():
     
     try:
         df_out = compute_fingerprints_for_df(df_in)
-    except Exception as e:
-        return jsonify({'error': f'Processing error: {str(e)}'}), 500
+    except Exception:
+        return jsonify({'error': 'Failed to process passenger data. Please check input format.'}), 500
 
     results = []
     for idx, row in df_out.iterrows():
@@ -200,4 +200,10 @@ if __name__ == '__main__':
     print("Starting Flask server on http://0.0.0.0:5000")
     print("Health check: http://localhost:5000/health")
     print("=" * 60)
-    APP.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Use debug mode only if explicitly enabled via environment variable
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
+    if debug_mode:
+        print("⚠️  WARNING: Running in DEBUG mode - NOT suitable for production!")
+    
+    APP.run(host='0.0.0.0', port=5000, debug=debug_mode)
