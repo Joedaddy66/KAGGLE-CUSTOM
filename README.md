@@ -48,9 +48,45 @@ View your app in AI Studio: https://ai.studio/apps/drive/1dCfkZZMv7qNzfpsi5KoayM
    
    Navigate to http://localhost:3000/
 
-### Optional: Backend Setup
+### Backend Setup (Optional but Recommended)
 
-For full Kaggle submission functionality, you'll need a Flask backend running on port 5000 with Kaggle API credentials configured. The frontend will work without the backend, but some features will be limited.
+For full Kaggle submission functionality and the Semiprime Survival Fingerprint Engine, set up the Flask backend:
+
+1. **Navigate to the backend directory:**
+   ```bash
+   cd backend
+   ```
+
+2. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Train the survival model (one-time setup):**
+   ```bash
+   python train_survival_assets.py --csv sample_titanic.csv
+   ```
+
+4. **Run the backend server:**
+   ```bash
+   python app.py
+   ```
+
+The backend will start on http://localhost:5000
+
+**With Docker (Recommended for Production):**
+```bash
+cd backend
+docker-compose up
+```
+
+See [backend/README.md](backend/README.md) for detailed backend documentation.
+
+**Configure Kaggle Credentials (Optional):**
+```bash
+export KAGGLE_USERNAME=your_username
+export KAGGLE_KEY=your_api_key
+```
 
 ## Available Scripts
 
@@ -60,9 +96,34 @@ For full Kaggle submission functionality, you'll need a Flask backend running on
 
 ## Tech Stack
 
+**Frontend:**
 - React 19
 - TypeScript
 - Vite
 - Tailwind CSS
 - Google Gemini API
-- Flask Backend (optional)
+
+**Backend:**
+- Flask (Python)
+- scikit-learn
+- pandas/numpy
+- Semiprime Survival Fingerprint Matrix Engine
+
+## Project Structure
+
+```
+.
+├── README.md                 # This file
+├── package.json             # Frontend dependencies
+├── App.tsx                  # Main React application
+├── components/              # React components
+├── services/                # API services
+├── backend/                 # Flask backend server
+│   ├── app.py              # Flask application
+│   ├── train_survival_assets.py  # Model training script
+│   ├── semiprime_survival_matrix.py  # Core ML functions
+│   ├── requirements.txt    # Python dependencies
+│   ├── Dockerfile          # Docker configuration
+│   └── README.md           # Backend documentation
+└── .env.local              # Environment variables (create this)
+```
