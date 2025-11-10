@@ -1,0 +1,5 @@
+{
+  "name": "Kaggle Submission Assistant",
+  "description": "An AI-powered frontend tool to streamline Kaggle competition submissions and assist with model conceptualization.",
+  "requestFramePermissions": []
+}
