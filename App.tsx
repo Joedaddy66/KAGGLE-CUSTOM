@@ -178,7 +178,7 @@ const App: React.FC = () => {
               competitions={competitions}
               selectedCompetitionId={selectedCompetitionId}
               trainedModels={trainedModels}
-              isKaggleAccountLinked={isBackendKaggleConfigured} {/* Use backend status */}
+              isKaggleAccountLinked={isBackendKaggleConfigured}
               onNewSubmission={handleNewSubmission}
             />
             <SubmissionHistory
@@ -202,7 +202,7 @@ const App: React.FC = () => {
         selectedCompetition={selectedCompetition}
         trainedModels={trainedModels}
         onSuggestConceptualizerPrompt={handleSuggestConceptualizerPrompt}
-        isKaggleAccountLinked={isBackendKaggleConfigured} {/* Use backend status */}
+        isKaggleAccountLinked={isBackendKaggleConfigured}
         submissionHistory={submissionHistory}
       />
     </div>

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      # Optional: Set Kaggle credentials for integration features
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
+      - KAGGLE_KEY=${KAGGLE_KEY:-}
+      - SROL_ASSET_PREFIX=survival_assets
+    volumes:
+      # Mount the current directory to allow hot-reloading in development
+      - .:/app
+      # Persist model assets
+      - ./data:/app/data
+    command: python app.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - kaggle-network
+
+networks:
+  kaggle-network:
+    driver: bridge
